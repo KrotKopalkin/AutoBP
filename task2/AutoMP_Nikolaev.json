@@ -88,7 +88,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        864,
+        848,
         320
       ],
       "id": "c45ef499-0628-4efb-9e88-ddf304292427",
@@ -164,7 +164,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        320,
+        272,
         -256
       ],
       "id": "e842defd-1b99-449c-af39-43b5b2354ccb",
@@ -177,8 +177,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        512,
-        -112
+        944,
+        -128
       ],
       "id": "3a556f87-bf54-4804-9ef7-8d34d7402322",
       "name": "Google Gemini Chat Model1",
@@ -200,8 +200,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        512,
-        -256
+        944,
+        -272
       ],
       "id": "53549dba-f63d-4613-8d9a-08a604b96100",
       "name": "AI Agent (Анализ семпла данных)"
@@ -230,7 +230,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "={{ $json.text }}",
+        "text": "={{ $json.output}}",
         "messages": {
           "messageValues": [
             {
@@ -251,7 +251,7 @@
     {
       "parameters": {
         "language": "pythonNative",
-        "pythonCode": "# Удаляем системный токен, чтобы пользователь его не видел\ntext = _items[0][\"json\"][\"output\"]\ncleanText = text.replace('[[INTERVIEW_COMPLETE]]', '')\n\nreturn  {\"text\": cleanText}\n"
+        "pythonCode": "# Удаляем системный токен, чтобы пользователь его не видел\ntext = _items[0][\"json\"][\"output\"]\ncleanText = text.replace('[[INTERVIEW_COMPLETE]]', '')\n\nreturn  {\"output\": cleanText}\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -280,9 +280,153 @@
           "name": "Google Gemini(PaLM) Api account"
         }
       }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        -272
+      ],
+      "id": "43e04fd9-96eb-4229-95d5-6241f754d811",
+      "name": "Send a text message1",
+      "webhookId": "4698aeb2-97cf-4555-a27f-bcb4381a313b",
+      "credentials": {
+        "telegramApi": {
+          "id": "kWs27mi5C7fC70E6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "=overwiev_data_{{ $('Telegram Trigger').item.json.message.chat.id }}.json",
+        "driveId": {
+          "__rl": true,
+          "value": "=",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/folders/1jcICEvFSRZNuhGGXBJV9tSh7HRoRXCuP",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        608,
+        -256
+      ],
+      "id": "5109032b-2b7f-4caf-9e3c-57fec40bf759",
+      "name": "Upload file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "apKBqsyCpsUKgTiE",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1152,
+        48
+      ],
+      "id": "8d116130-9d78-4ef9-8951-a5a83ca6792a",
+      "name": "Convert to File (biz info)"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        -256
+      ],
+      "id": "e9c1800a-06de-4111-ba83-0001b8545001",
+      "name": "Convert to File (data info)"
+    },
+    {
+      "parameters": {
+        "name": "=interviev_data_{{ $('Telegram Trigger').item.json.message.chat.id }}.json",
+        "driveId": {
+          "__rl": true,
+          "value": "=",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/folders/1jcICEvFSRZNuhGGXBJV9tSh7HRoRXCuP",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1296,
+        48
+      ],
+      "id": "ccdfb9a9-0b56-4633-b288-c9a9bc7d5ab5",
+      "name": "Upload file (biz info)",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "apKBqsyCpsUKgTiE",
+          "name": "Google Drive account 2"
+        }
+      }
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 896520903,
+          "message": {
+            "message_id": 95,
+            "from": {
+              "id": 505330351,
+              "is_bot": false,
+              "first_name": "Evgenii",
+              "last_name": "Nikolaev",
+              "username": "Nievni",
+              "language_code": "ru",
+              "is_premium": true
+            },
+            "chat": {
+              "id": 505330351,
+              "first_name": "Evgenii",
+              "last_name": "Nikolaev",
+              "username": "Nievni",
+              "type": "private"
+            },
+            "date": 1768476300,
+            "text": "Уменьшение загруженности текущей нулевой линии, которая раскидывает их руками"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
     "Telegram Trigger": {
       "main": [
@@ -372,7 +516,7 @@
       "main": [
         [
           {
-            "node": "AI Agent (Анализ семпла данных)",
+            "node": "Convert to File (data info)",
             "type": "main",
             "index": 0
           }
@@ -442,7 +586,46 @@
     },
     "JSON Formalizer": {
       "main": [
-        []
+        [
+          {
+            "node": "Convert to File (biz info)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Анализ семпла данных)": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File (biz info)": {
+      "main": [
+        [
+          {
+            "node": "Upload file (biz info)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File (data info)": {
+      "main": [
+        [
+          {
+            "node": "Upload file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -451,7 +634,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "37c424e1-bc20-48a1-9bef-6d98c08bb662",
+  "versionId": "a4142f47-93a1-4845-9ab3-554c175b996c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "a8ffd748749467d3b262c901c2d6431c41e48d80739fbc6db65a48469fffa75a"
