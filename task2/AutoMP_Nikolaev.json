@@ -89,7 +89,7 @@
       "typeVersion": 1.2,
       "position": [
         848,
-        320
+        368
       ],
       "id": "c45ef499-0628-4efb-9e88-ddf304292427",
       "name": "Send a text message",
@@ -177,8 +177,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        944,
-        -128
+        2720,
+        16
       ],
       "id": "3a556f87-bf54-4804-9ef7-8d34d7402322",
       "name": "Google Gemini Chat Model1",
@@ -192,7 +192,7 @@
     {
       "parameters": {
         "promptType": "=define",
-        "text": "=Проанализируй эти данные из Excel файла.\nВсего строк: {{ $json.total_rows_approx }}\nКоличество колонок: {{ $json.columns_count }}\n\nВот фрагмент данных:\n{{ $json.data_snippet }}",
+        "text": "=Проанализируй данные ниже.\nВ этом тексте содержатся:\n1. Описание бизнес-задачи и требований.\n2. Сэмпл данных из файла.\n\nТвоя задача: Сопоставить данные с требованиями и выдать заключение, подходят ли данные для решаемой задачи.\n\nВОТ ДАННЫЕ:\n{{ $json.final_context }}",
         "options": {
           "systemMessage": "Ты опытный бизнес-аналитик в Data Science. Твоя задача — выяснить у пользователя детали его ML-задачи по методологии CRISP-DM. Задавай по ОДНОМУ вопросу за раз.\n\nСпроси бизнес-цель.\n\nСпроси, какая метрика успеха (деньги, точность?).\n\nСпроси, какие данные есть (текст, таблицы, картинки?). Когда соберешь все 3 ответа, напиши: 'ОТЛИЧНО. ТЕПЕРЬ ПРИШЛИ МНЕ ФАЙЛ С ПРИМЕРОМ ДАННЫХ (CSV или Excel)'.\""
         }
@@ -200,8 +200,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        944,
-        -272
+        2720,
+        -128
       ],
       "id": "53549dba-f63d-4613-8d9a-08a604b96100",
       "name": "AI Agent (Анализ семпла данных)"
@@ -292,8 +292,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1280,
-        -272
+        3056,
+        -128
       ],
       "id": "43e04fd9-96eb-4229-95d5-6241f754d811",
       "name": "Send a text message1",
@@ -307,7 +307,7 @@
     },
     {
       "parameters": {
-        "name": "=overwiev_data_{{ $('Telegram Trigger').item.json.message.chat.id }}.json",
+        "name": "=review_data_{{ $('Telegram Trigger').first().json.message.from.id }}.json",
         "driveId": {
           "__rl": true,
           "value": "=",
@@ -365,7 +365,7 @@
     },
     {
       "parameters": {
-        "name": "=interviev_data_{{ $('Telegram Trigger').item.json.message.chat.id }}.json",
+        "name": "=requirements_{{ $('Telegram Trigger').item.json.message.chat.id }}.json",
         "driveId": {
           "__rl": true,
           "value": "=",
@@ -381,7 +381,7 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1296,
+        1344,
         48
       ],
       "id": "ccdfb9a9-0b56-4633-b288-c9a9bc7d5ab5",
@@ -392,15 +392,110 @@
           "name": "Google Drive account 2"
         }
       }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "list",
+        "useQueryString": true,
+        "queryString": "=name contains '{{ $('Telegram Trigger').first().json.message.chat.id }}' and trashed = false",
+        "options": {
+          "fields": [
+            "*"
+          ]
+        }
+      },
+      "name": "Check Files Exist",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        -256
+      ],
+      "id": "2a659748-9290-462a-8dae-23ce25de55ad",
+      "credentials": {
+        "googleApi": {
+          "id": "PEGl5zVT29M4ru2E",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $input.all().length }}",
+              "operation": "largerEqual",
+              "value2": 2
+            }
+          ]
+        }
+      },
+      "name": "Are both files ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        -80
+      ],
+      "id": "947831e1-d096-4b70-a999-4088eae424b3"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}",
+        "options": {}
+      },
+      "name": "Download Both",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        -128
+      ],
+      "id": "eba7bc62-d505-4b0e-ad4a-afc361dc1644",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "apKBqsyCpsUKgTiE",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Convert to JSON",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        -128
+      ],
+      "id": "14f80cf5-e3fc-4f6a-ac5f-8e9b277d4638"
+    },
+    {
+      "parameters": {
+        "jsCode": "let bigString = \"\";\nlet counter = 1;\n\n// Пробегаем по всем скачанным файлам\nfor (const item of $input.all()) {\n  const data = item.json;\n\n  // Добавляем красивый разделитель, чтобы Агент понял, что начался новый кусок\n  bigString += `\\n\\n⬇️ --- ДОКУМЕНТ №${counter} --- ⬇️\\n`;\n  \n  // Если внутри просто текст — берем текст. Если объект — превращаем в строку.\n  if (typeof data === 'string') {\n      bigString += data;\n  } else {\n      // JSON.stringify(data, null, 2) делает структуру читаемой для человека и AI\n      bigString += JSON.stringify(data, null, 2);\n  }\n  \n  counter++;\n}\n\nreturn {\n  json: {\n    final_context: bigString\n  }\n};"
+      },
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        -128
+      ],
+      "id": "40189d8d-c4bd-463e-b62e-631b91fc269a"
     }
   ],
   "pinData": {
     "Telegram Trigger": [
       {
         "json": {
-          "update_id": 896520903,
+          "update_id": 896520912,
           "message": {
-            "message_id": 95,
+            "message_id": 115,
             "from": {
               "id": 505330351,
               "is_bot": false,
@@ -417,8 +512,24 @@
               "username": "Nievni",
               "type": "private"
             },
-            "date": 1768476300,
-            "text": "Уменьшение загруженности текущей нулевой линии, которая раскидывает их руками"
+            "date": 1768491253,
+            "document": {
+              "file_name": "проанализирруй_этот_результат_Встроенная_важно_.xlsx",
+              "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "file_id": "BQACAgIAAxkBAANzaWkI9XC8xRqkiX4PkmJJa_me4VcAAraVAAIDH0lLKgKOMdSyX7Q4BA",
+              "file_unique_id": "AgADtpUAAgMfSUs",
+              "file_size": 5657
+            }
+          }
+        },
+        "binary": {
+          "data": {
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "fileExtension": "xlsx",
+            "data": "filesystem-v2",
+            "fileName": "file_7.xlsx",
+            "id": "filesystem-v2:workflows/KhQy5yqG8DMs2e2OvCILm/executions/temp/binary_data/9d38a49c-edd4-4107-9410-b914060d3d10",
+            "fileSize": "5.66 kB"
           }
         },
         "pairedItem": {
@@ -627,6 +738,83 @@
           }
         ]
       ]
+    },
+    "Check Files Exist": {
+      "main": [
+        [
+          {
+            "node": "Are both files ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Both": {
+      "main": [
+        [
+          {
+            "node": "Convert to JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file1": {
+      "main": [
+        [
+          {
+            "node": "Check Files Exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file (biz info)": {
+      "main": [
+        [
+          {
+            "node": "Are both files ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are both files ready?": {
+      "main": [
+        [
+          {
+            "node": "Download Both",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Анализ семпла данных)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -634,7 +822,7 @@
     "executionOrder": "v1",
     "availableInMCP": false
   },
-  "versionId": "a4142f47-93a1-4845-9ab3-554c175b996c",
+  "versionId": "5e6f3dab-904f-42b0-b99c-a85334f62dd2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "a8ffd748749467d3b262c901c2d6431c41e48d80739fbc6db65a48469fffa75a"
