@@ -1,0 +1,461 @@
+{
+  "name": "AutoMP_Nikolaev",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        -16
+      ],
+      "id": "76be4a46-e95b-47f4-9732-882da4d480aa",
+      "name": "Telegram Trigger",
+      "webhookId": "f02aa484-7e32-4049-8374-7eb0be87e79f",
+      "credentials": {
+        "telegramApi": {
+          "id": "kWs27mi5C7fC70E6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "Ты опытный бизнес-аналитик в Data Science. Твоя задача — выяснить у пользователя детали его ML-задачи по методологии CRISP-DM. Задавай по ОДНОМУ вопросу за раз.\n\nСпроси бизнес-цель.\n\nСпроси, какая метрика успеха (деньги, точность?).\n\nСпроси, какие данные есть (текст, таблицы, картинки?). Когда соберешь все 3 ответа, напиши: 'ОТЛИЧНО. ТЕПЕРЬ ПРИШЛИ МНЕ ФАЙЛ С ПРИМЕРОМ ДАННЫХ (CSV или Excel)'.\"\n\nКОГДА ИНТЕРВЬЮ ЗАВЕРШЕНО (собраны все 3 пункта):\n\nНапиши фразу: \"[[INTERVIEW_COMPLETE]]\"\n\nНапиши краткое резюме собранных данных.\n\nПопроси загрузить файл."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -64,
+        96
+      ],
+      "id": "41fb5893-3516-4474-9c92-d9dcc82161c0",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        272
+      ],
+      "id": "c690bc1e-b667-492d-910e-a468ec5f07eb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "fRHdWze3dKerOOe9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        272
+      ],
+      "id": "dc6bb328-e02c-4511-9092-2932f0aeaf91",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        320
+      ],
+      "id": "c45ef499-0628-4efb-9e88-ddf304292427",
+      "name": "Send a text message",
+      "webhookId": "4698aeb2-97cf-4555-a27f-bcb4381a313b",
+      "credentials": {
+        "telegramApi": {
+          "id": "kWs27mi5C7fC70E6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.message.document ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "61f598b1-9ab6-40b4-b507-a01ea2324fb1",
+      "name": "Is it a File?2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "name": "Get File Info",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -256
+      ],
+      "id": "f9a8c003-89c3-4193-8fc4-3925b1b2dcde",
+      "webhookId": "9c7d53c0-6db8-4607-9caf-fdc42b6188c6",
+      "credentials": {
+        "telegramApi": {
+          "id": "kWs27mi5C7fC70E6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Spreadsheet File",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -256
+      ],
+      "id": "d3fc7ef4-a2fa-4a04-9b8c-afb4e0add07d"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# Используем _items, как ты указал\nif not _items:\n    return [{\"json\": {\"error\": \"Empty dataset\"}}]\n\n# 1. Собираем превью (первые 20 строк)\nrows = []\nfor i, item in enumerate(_items):\n    if i >= 20:\n        break\n    # Доступ к данным строки через [\"json\"]\n    rows.append(item[\"json\"])\n\n# 2. Понимаем структуру (колонки)\n# Берем ключи из первой строки, если она есть\ncolumns = list(rows[0].keys()) if rows else []\n\n# 3. Формируем текст для LLM\npreview_lines = []\n# Заголовок\npreview_lines.append(\", \".join([str(c) for c in columns]))\n\n# Строки\nfor row in rows:\n    # Собираем значения, конвертируем в строку\n    values = [str(row.get(col, \"\")) for col in columns]\n    preview_lines.append(\", \".join(values))\n\npreview_text = \"\\n\".join(preview_lines)\n\n# 4. Возвращаем агрегированный результат\n# Важно вернуть структуру [{\"json\": {...}}], чтобы n8n ее понял\nreturn [{\n    \"json\": {\n        \"total_rows_approx\": len(_items),\n        \"columns_count\": len(columns),\n        \"data_snippet\": preview_text\n    }\n}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -256
+      ],
+      "id": "e842defd-1b99-449c-af39-43b5b2354ccb",
+      "name": "Code in Python"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        512,
+        -112
+      ],
+      "id": "3a556f87-bf54-4804-9ef7-8d34d7402322",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "fRHdWze3dKerOOe9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "=Проанализируй эти данные из Excel файла.\nВсего строк: {{ $json.total_rows_approx }}\nКоличество колонок: {{ $json.columns_count }}\n\nВот фрагмент данных:\n{{ $json.data_snippet }}",
+        "options": {
+          "systemMessage": "Ты опытный бизнес-аналитик в Data Science. Твоя задача — выяснить у пользователя детали его ML-задачи по методологии CRISP-DM. Задавай по ОДНОМУ вопросу за раз.\n\nСпроси бизнес-цель.\n\nСпроси, какая метрика успеха (деньги, точность?).\n\nСпроси, какие данные есть (текст, таблицы, картинки?). Когда соберешь все 3 ответа, напиши: 'ОТЛИЧНО. ТЕПЕРЬ ПРИШЛИ МНЕ ФАЙЛ С ПРИМЕРОМ ДАННЫХ (CSV или Excel)'.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        512,
+        -256
+      ],
+      "id": "53549dba-f63d-4613-8d9a-08a604b96100",
+      "name": "AI Agent (Анализ семпла данных)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.output }}",
+              "operation": "contains",
+              "value2": "[[INTERVIEW_COMPLETE]]"
+            }
+          ]
+        }
+      },
+      "id": "c255aace-8f77-48fa-ba6e-e70490d65a90",
+      "name": "Is Interview Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        304,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Ты — JSON Extractor. Твоя задача — прочитать резюме диалога и превратить его в чистый JSON.\\nИгнорируй служебные токены типа [[INTERVIEW_COMPLETE]].\\n\\nВЫХОДНОЙ ФОРМАТ (JSON):\\n{\\n  \\\"business_goal\\\": \\\"...\\\",\\n  \\\"success_metric\\\": \\\"...\\\",\\n  \\\"data_description\\\": \\\"...\\\",\\n  \\\"suggested_algorithm\\\": \\\"...\\\" (предложи сам: NLP, CV, Regression, etc)\\n}"
+            }
+          ]
+        }
+      },
+      "id": "c1099f1c-e531-4df2-b8e0-fd4cf164c95a",
+      "name": "JSON Formalizer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        864,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# Удаляем системный токен, чтобы пользователь его не видел\ntext = _items[0][\"json\"][\"output\"]\ncleanText = text.replace('[[INTERVIEW_COMPLETE]]', '')\n\nreturn  {\"text\": cleanText}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        80
+      ],
+      "id": "831eea66-d2ec-4d26-b805-3d64edfd4ac9",
+      "name": "Text Cleanup"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        864,
+        192
+      ],
+      "id": "91a50b17-2e9d-4188-b0b0-bb06135a685b",
+      "name": "Google Gemini Chat Model (JSON Formalizer)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "fRHdWze3dKerOOe9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is it a File?2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Is Interview Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is it a File?2": {
+      "main": [
+        [
+          {
+            "node": "Get File Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get File Info": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File": {
+      "main": [
+        [
+          {
+            "node": "Code in Python",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Анализ семпла данных)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Анализ семпла данных)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Is Interview Done?": {
+      "main": [
+        [
+          {
+            "node": "Text Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Cleanup": {
+      "main": [
+        [
+          {
+            "node": "JSON Formalizer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model (JSON Formalizer)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "JSON Formalizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Formalizer": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "37c424e1-bc20-48a1-9bef-6d98c08bb662",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a8ffd748749467d3b262c901c2d6431c41e48d80739fbc6db65a48469fffa75a"
+  },
+  "id": "KhQy5yqG8DMs2e2OvCILm",
+  "tags": []
+}
